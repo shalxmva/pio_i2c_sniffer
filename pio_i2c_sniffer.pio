@@ -1,0 +1,54 @@
+; SPDX short identifier: BSD-3-Clause
+; BSD 3-Clause License
+;
+; Copyright (c) 2025, Shalx
+
+.define public SDA_PIN 0
+.define public SCL_PIN 1
+
+.define public I2C_SM_EVENT 0
+.define public I2C_SM_DATA  1
+.define public START_IRQ 0
+.define public STOP_IRQ  1
+.define public START_CAPTURE 4
+
+.program i2c_events
+    wait 1 gpio SDA_PIN
+.wrap_target
+wait_low:
+    wait 0 gpio SDA_PIN
+    jmp pin NOTIFY_I2C_START
+    jmp wait_high
+NOTIFY_I2C_START:
+    irq set START_IRQ
+    irq set START_CAPTURE
+wait_high:
+    wait 1 gpio SDA_PIN
+    jmp PIN NOTIFY_I2C_STOP
+    jmp wait_low
+NOTIFY_I2C_STOP:
+    irq set STOP_IRQ
+.wrap
+
+
+.program i2c_machine
+    wait 1 irq START_CAPTURE
+.wrap_target
+start_receiving:
+    set X, 8
+    MOV ISR, NULL
+bitcount:
+    wait 0 GPIO SCL_PIN
+    wait 1 GPIO SCL_PIN [5]
+    IN PINS, 1
+    jmp X-- bitcount
+    push
+.wrap
+
+
+% c-sdk {
+// this is a raw helper function for use by the user which sets up the GPIO output, and configures the SM to output on a particular pin
+
+
+
+%}
