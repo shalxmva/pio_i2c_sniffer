@@ -3,8 +3,8 @@
 ;
 ; Copyright (c) 2025, Shalx
 
-.define public SDA_PIN 0
-.define public SCL_PIN 1
+.define public SDA_PIN @I2C_SNIFFER_SDA_PIN@
+.define public SCL_PIN @I2C_SNIFFER_SCL_PIN@
 
 .define public I2C_SM_EVENT 0
 .define public I2C_SM_DATA  1
