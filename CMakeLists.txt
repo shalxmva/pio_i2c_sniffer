@@ -9,10 +9,8 @@ add_library(pio_i2c_sniffer STATIC ${CMAKE_CURRENT_LIST_DIR}/pio_i2c_sniffer.c)
 
 target_compile_definitions(pio_i2c_sniffer PRIVATE -DI2C_SNIFFER_PIO_INSTANCE=pio0)  # Define the PIO instance for the I2C sniffer
 target_compile_definitions(pio_i2c_sniffer PRIVATE -DI2C_SNIFFER_IRQ=PIO0_IRQ_0)     # Define the PIO instance and IRQ for the I2C sniffer
-target_compile_definitions(pio_i2c_sniffer PUBLIC  -DI2C_MAX_FRAMES_PER_MESSAGE=16)  # Define the maximum number of frames per message
-target_compile_definitions(pio_i2c_sniffer PUBLIC  -DI2C_QUEUE_LEN=16)  # Define the maximum number of frames per message
-set(I2C_SNIFFER_SDA_PIN 0)
-set(I2C_SNIFFER_SCL_PIN 1)
+target_compile_definitions(pio_i2c_sniffer PUBLIC  -DI2C_MAX_FRAMES_PER_MESSAGE=8)  # Define the maximum number of frames per message
+target_compile_definitions(pio_i2c_sniffer PUBLIC  -DI2C_QUEUE_LEN=128)  # Define the maximum number of frames per message
 
 target_include_directories(pio_i2c_sniffer PUBLIC ${CMAKE_CURRENT_LIST_DIR}/include)
 target_include_directories(pio_i2c_sniffer PRIVATE ${CMAKE_CURRENT_BINARY_DIR})

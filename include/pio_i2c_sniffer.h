@@ -16,7 +16,8 @@ typedef struct
         };
     };
     
-    bool ack;  // 1 bit for ACK/NACK
+    bool ack:1;  // 1 bit for ACK/NACK
+    bool start:1;
 } i2c_frame_t;
 
 typedef struct 

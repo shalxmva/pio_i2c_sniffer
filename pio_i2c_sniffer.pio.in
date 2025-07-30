@@ -39,7 +39,7 @@ start_receiving:
     MOV ISR, NULL
 bitcount:
     wait 0 GPIO SCL_PIN
-    wait 1 GPIO SCL_PIN [5]
+    wait 1 GPIO SCL_PIN [31]
     IN PINS, 1
     jmp X-- bitcount
     push

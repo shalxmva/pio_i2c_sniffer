@@ -43,32 +43,55 @@ static volatile i2c_message_t queue[I2C_QUEUE_LEN] = {0}; // Array to hold recei
 static volatile uint8_t back_idx = 0;
 static volatile uint8_t front_idx = 0;
 
-
+static bool started = false;
+static bool addressframe = false;
 static void i2c_start_stop_rx_irq(void)
 {
     irq_set_enabled(I2C_SNIFFER_IRQ, false);
 
     if(pio_interrupt_get(I2C_SNIFFER_PIO_INSTANCE, 1))  //Check STOP IRQ
     {
-        pio_sm_exec(I2C_SNIFFER_PIO_INSTANCE, I2C_SM_DATA, pio_encode_jmp(off1));
         pio_interrupt_clear(I2C_SNIFFER_PIO_INSTANCE, 1);
+        pio_sm_exec(I2C_SNIFFER_PIO_INSTANCE, I2C_SM_DATA, pio_encode_jmp(off1));
+        started = false;
+
         front_idx++;
         if(front_idx >= I2C_QUEUE_LEN) {
             front_idx = 0; 
         }
+
+        queue[front_idx].length = 0; // Reset the message length for the new message
     } 
     else if(pio_interrupt_get(I2C_SNIFFER_PIO_INSTANCE, 0)) // Check START IRQ
     {
         pio_interrupt_clear(I2C_SNIFFER_PIO_INSTANCE, 0);
-        queue[front_idx].length = 0; // Reset the message length for the new message
+        if(started)
+        {
+            pio_sm_exec(I2C_SNIFFER_PIO_INSTANCE, I2C_SM_DATA, pio_encode_jmp(off1+1));
+
+            front_idx++;
+            if(front_idx >= I2C_QUEUE_LEN) {
+                front_idx = 0; 
+            }
+    
+            queue[front_idx].length = 0; // Reset the message length for the new message
+        }
+
+        started = true;
+        addressframe = true;
     }
     else
     {
-        uint32_t data = pio_sm_get(I2C_SNIFFER_PIO_INSTANCE, I2C_SM_DATA); // Read data from the PIO state machine
-        uint8_t index = queue[front_idx].length;
-        queue[front_idx].msg[index].ack = !(data&0x01); // Extract ACK/NACK bit
-        queue[front_idx].msg[index].data = (data>>1); // Store the raw data
-        queue[front_idx].length++;
+        if(started)
+        {
+            uint32_t data = pio_sm_get(I2C_SNIFFER_PIO_INSTANCE, I2C_SM_DATA); // Read data from the PIO state machine
+            uint8_t index = queue[front_idx].length;
+            queue[front_idx].msg[index].ack = !(data&0x01); // Extract ACK/NACK bit
+            queue[front_idx].msg[index].data = (data>>1); // Store the raw data
+            queue[front_idx].msg[index].start = addressframe;
+            queue[front_idx].length++;
+            addressframe = false;
+        }
     }
 
     irq_set_enabled(I2C_SNIFFER_IRQ, true);
@@ -137,7 +160,9 @@ void i2c_sniffer_init() {
     pio_sm_clear_fifos(I2C_SNIFFER_PIO_INSTANCE, I2C_SM_DATA);
     pio_sm_restart(I2C_SNIFFER_PIO_INSTANCE, I2C_SM_DATA);
     pio_sm_init(I2C_SNIFFER_PIO_INSTANCE, I2C_SM_DATA, off1, &config1);
-
+    
+    pio_sm_set_clkdiv(I2C_SNIFFER_PIO_INSTANCE, I2C_SM_EVENT, 10.0f);
+    pio_sm_set_clkdiv(I2C_SNIFFER_PIO_INSTANCE, I2C_SM_DATA, 10.0f);
     pio_sm_set_enabled(I2C_SNIFFER_PIO_INSTANCE, I2C_SM_EVENT, true);
     pio_sm_set_enabled(I2C_SNIFFER_PIO_INSTANCE, I2C_SM_DATA,  true);
 }
@@ -160,13 +185,13 @@ bool i2c_sniffer_get_message(i2c_message_t *msg)
 
 void i2c_print_message(const i2c_message_t *msg)
 {
-    printf("Address:0x%02X%s %s[",
-           msg->msg[0].address,
-           msg->msg[0].rw ? "r" : "w",
+    printf("Addr:0x%02X%s [",
+           msg->msg[0].data,
+           //msg->msg[0].rw ? "r" : "w",
            msg->msg[0].ack ? "a" : "n");
     
     for (uint8_t i = 1; i < msg->length; i++) {
-        printf("%02X%s",
+          printf("%02X%s ",
                msg->msg[i].data,
                msg->msg[i].ack ? "a" : "n");
     }
